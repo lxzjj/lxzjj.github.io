@@ -1,0 +1,817 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="webpack,javascript," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="前言webpack 是一个强大的模块打包工具，之所以强大的一个原因在于它拥有灵活、丰富的插件机制。但是 webpack 的文档不太友好，就我自己的学习经历来说，官方的文档并不详细，网上的学习资料又少有完整的概述和例子。所以，在研究了一段时间的 webpack 源码之后，自己希望写个系列文章，结合自己的实践一起来谈谈 webpack 插件这个主题，也希望能够帮助其他人更全面地了解 webpack。">
+<meta name="keywords" content="webpack,javascript">
+<meta property="og:type" content="article">
+<meta property="og:title" content="玩转webpack（二）：webpack的核心对象">
+<meta property="og:url" content="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/index.html">
+<meta property="og:site_name" content="理性在纠结">
+<meta property="og:description" content="前言webpack 是一个强大的模块打包工具，之所以强大的一个原因在于它拥有灵活、丰富的插件机制。但是 webpack 的文档不太友好，就我自己的学习经历来说，官方的文档并不详细，网上的学习资料又少有完整的概述和例子。所以，在研究了一段时间的 webpack 源码之后，自己希望写个系列文章，结合自己的实践一起来谈谈 webpack 插件这个主题，也希望能够帮助其他人更全面地了解 webpack。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/webpack类图.svg">
+<meta property="og:image" content="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/依赖和模块的关系.svg">
+<meta property="og:image" content="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/demo.jpg">
+<meta property="og:updated_time" content="2017-11-07T19:01:36.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="玩转webpack（二）：webpack的核心对象">
+<meta name="twitter:description" content="前言webpack 是一个强大的模块打包工具，之所以强大的一个原因在于它拥有灵活、丰富的插件机制。但是 webpack 的文档不太友好，就我自己的学习经历来说，官方的文档并不详细，网上的学习资料又少有完整的概述和例子。所以，在研究了一段时间的 webpack 源码之后，自己希望写个系列文章，结合自己的实践一起来谈谈 webpack 插件这个主题，也希望能够帮助其他人更全面地了解 webpack。">
+<meta name="twitter:image" content="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/webpack类图.svg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/"/>
+
+
+
+
+
+  <title> 玩转webpack（二）：webpack的核心对象 | 理性在纠结 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">理性在纠结</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">互联网搬砖小码农，欢迎一起讨论前端技术</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://lxzjj.github.io/2017/11/08/玩转webpack（二）/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="理性在纠结">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="理性在纠结">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                玩转webpack（二）：webpack的核心对象
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-11-08T03:01:36+08:00">
+                2017-11-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>webpack 是一个强大的模块打包工具，之所以强大的一个原因在于它拥有灵活、丰富的插件机制。但是 webpack 的文档不太友好，就我自己的学习经历来说，官方的文档并不详细，网上的学习资料又少有完整的概述和例子。所以，在研究了一段时间的 webpack 源码之后，自己希望写个系列文章，结合自己的实践一起来谈谈 webpack 插件这个主题，也希望能够帮助其他人更全面地了解 webpack。</p>
+<p>这篇文章是系列文章的第二篇，将会从对象的角度来讲解 webpack。如果你想从整体角度了解 webpack，可以先阅读系列文章的第一篇：<a href="https://lxzjj.github.io/2017/11/02/%E7%8E%A9%E8%BD%ACwebpack%EF%BC%88%E4%B8%80%EF%BC%89/">玩转webpack（一）</a></p>
+<p><em>P.S. 以下的分析都基于 webpack 3.6.0</em><br><em>P.S. 本文将继续沿用第一篇文章的名词，任务点表示通过 <code>plugin</code> 方法注册的名称</em></p>
+<h2 id="webpack中的核心对象"><a href="#webpack中的核心对象" class="headerlink" title="webpack中的核心对象"></a>webpack中的核心对象</h2><p>跟第一篇文章类似，我们不会讲所有 webpack 中的对象都拿出来讲解，而是整理了一些比较核心的概念。我们可以先看看下面的类图：</p>
+<p><img src="/2017/11/08/玩转webpack（二）/webpack类图.svg" alt="webpack核心类图"></p>
+<p>下面的论述将会逐一讲述类图中的对象，首先我们先来看一下最顶层的类 <code>Tapable</code>。</p>
+<h2 id="Tapable"><a href="#Tapable" class="headerlink" title="Tapable"></a>Tapable</h2><p><code>Tapable</code> 提供了 webpack 中基于任务点的架构基础，它将提供任务点注册的方法以及触发的方法。</p>
+<p>一个简单的例子，使用 <code>plugin</code> 方法来注册一个任务点，然后使用 <code>applyPlugins</code> 方法触发：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">let</span> obj = <span class="keyword">new</span> Tapable()</div><div class="line"></div><div class="line">obj.plugin(<span class="string">"name"</span>, (params1, params2) =&gt; &#123;</div><div class="line">    <span class="built_in">console</span>.log(params1) <span class="comment">// 1</span></div><div class="line">    <span class="built_in">console</span>.log(params2) <span class="comment">// params</span></div><div class="line">&#125;)</div><div class="line"></div><div class="line">obj.applyPlugins(<span class="string">"name"</span>, <span class="number">1</span>, <span class="string">"params"</span>)</div></pre></td></tr></table></figure>
+<p><code>Tapable</code> 里面注册任务点只有 <code>plugin</code> 方法，但是触发任务点的方法是提供了很多，可以分为同步和异步执行两类：</p>
+<p>同步执行：</p>
+<ul>
+<li><code>applyPlugins(name, ...params)</code></li>
+<li><code>applyPlugins0(name)</code></li>
+<li><code>applyPlugins1(name, param)</code></li>
+<li><code>applyPlugins2(name, param1, param2)</code></li>
+<li><code>applyPluginsWaterfall(name, init, ...params)</code></li>
+<li><code>applyPluginsWaterfall0(name, init)</code></li>
+<li><code>applyPluginsWaterfall1(name, init, param)</code></li>
+<li><code>applyPluginsWaterfall2(name, init, param1, param2)</code></li>
+<li><code>applyPluginsBailResult(name, ...params)</code></li>
+<li><code>applyPluginsBailResult0(name)</code></li>
+<li><code>applyPluginsBailResult1(name, param)</code></li>
+<li><code>applyPluginsBailResult2(name, param1, param2 )</code></li>
+<li><code>applyPluginsBailResult3(name, param1, param2, param3)</code></li>
+<li><code>applyPluginsBailResult4(name, param1, param2, param3, param4)</code></li>
+<li><code>applyPluginsBailResult5(name, param1, param2, param3, param4, param5)</code></li>
+</ul>
+<p>异步执行：</p>
+<ul>
+<li><code>applyPluginsAsync(name, ...params, callback)</code></li>
+<li><code>applyPluginsAsyncSeries(name, ...params, callback)</code></li>
+<li><code>applyPluginsAsyncSeries1(name, param, callback)</code></li>
+<li><code>applyPluginsAsyncSeriesBailResult(name, ...params, callback)</code></li>
+<li><code>applyPluginsAsyncSeriesBailResult1(name, param, callback)</code></li>
+<li><code>applyPluginsAsyncWaterfall(name, init, ...params, callback)</code></li>
+<li><code>applyPluginsParallel(name, ...params, callback)</code></li>
+<li><code>applyPluginsParallelBailResult(name, ...params, callback)</code></li>
+<li><code>applyPluginsParallelBailResult1(name, param, callback)</code></li>
+</ul>
+<p>虽然上面的方法看起来很多，但从函数名就联想到函数的实际功能：</p>
+<ul>
+<li><code>*Waterfall</code> 的方法会将上一个监听器的执行结果传给下一个</li>
+<li><code>*BailResult</code> 的方法只会执行到第一个返回结果不为undefined的监听器</li>
+<li><code>*Series</code> 的方法会严格线性来执行异步监听器，只有上一个结束下一个才会开始</li>
+<li><code>*Parallel</code> 的方法会并行执行异步监听器</li>
+<li>函数名称最后如果带有数字，那么会按照实际的参数传给监听器。如果有数字，则严格按照数字来传递参数个数。</li>
+</ul>
+<p>最后 <code>Tapable</code> 类还提供了一个方法 <code>apply</code>，它的作用是提供了外部插件注册任务点的统一接口，要求都在 <code>apply</code> 方法内部进行任务点注册逻辑：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">let</span> t = <span class="keyword">new</span> Tapable()</div><div class="line"></div><div class="line"><span class="keyword">let</span> somePlugins = [&#123;</div><div class="line">    apply(t) &#123;</div><div class="line">        t.plugin(<span class="string">"name"</span>, () =&gt; &#123;</div><div class="line">            <span class="built_in">console</span>.log(<span class="string">"1"</span>)</div><div class="line">            <span class="keyword">return</span> <span class="literal">true</span></div><div class="line">        &#125;)</div><div class="line">    &#125;</div><div class="line">&#125;, &#123;</div><div class="line">    apply(t) &#123;</div><div class="line">        t.plugin(<span class="string">"name"</span>, () =&gt; &#123;</div><div class="line">            <span class="built_in">console</span>.log(<span class="string">"2"</span>)</div><div class="line">        &#125;)</div><div class="line">    &#125;</div><div class="line">&#125;]</div><div class="line"></div><div class="line">t.apply(somePlugins)</div><div class="line"></div><div class="line">t.applyPlugins(<span class="string">"name"</span>) <span class="comment">// 1 2</span></div><div class="line">t.applyPluginsBailResult(<span class="string">"name"</span>) <span class="comment">// 1</span></div></pre></td></tr></table></figure></p>
+<p>webpack 中自定义插件就是调用 <code>Compiler</code> 实例对象（继承于 <code>Tapable</code>）的 <code>apply</code> 方法：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// webpack.config.js</span></div><div class="line"><span class="built_in">module</span>.exports = &#123;</div><div class="line">    plugins: [&#123;</div><div class="line">        apply(compiler) &#123;</div><div class="line">            compiler.plugin(<span class="string">"done"</span>, (stat) =&gt; &#123;</div><div class="line">                <span class="built_in">console</span>.log(<span class="string">"it works!"</span>)</div><div class="line">            &#125;)</div><div class="line">        &#125;</div><div class="line">    &#125;]</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/webpack.js</span></div><div class="line"><span class="keyword">if</span>(options.plugins &amp;&amp; <span class="built_in">Array</span>.isArray(options.plugins)) &#123;</div><div class="line">    compiler.apply.apply(compiler, options.plugins);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>webpack 源码中随处可以见 <code>Tapable</code> 的身影，在了解其工作原理对理解源码很有帮助。<code>Compiler</code> 继承了 <code>Tapable</code>，同时也作为构建的入口对象，下面我们来看一下。</p>
+<h2 id="Compiler"><a href="#Compiler" class="headerlink" title="Compiler"></a>Compiler</h2><p><code>Compiler</code> 是一个编译器实例，在 webpack 的每个进程中只会创建一个对象，它用来创建构建对象 <code>Compilation</code>，本身需要注意的属性和方法并不是很多。下面我们找几个主要的属性来说一下。</p>
+<h3 id="options属性"><a href="#options属性" class="headerlink" title="options属性"></a>options属性</h3><p>当 webpack 开始运行时，第一件事就是解析我们传入的配置，然后将配置赋值给 <code>Compiler</code> 实例：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/webpack.js#L37</span></div><div class="line"></div><div class="line">compiler = <span class="keyword">new</span> Compiler();</div><div class="line"><span class="comment">// 其他代码..</span></div><div class="line">compiler.options = <span class="keyword">new</span> WebpackOptionsApply().process(options, compiler);</div></pre></td></tr></table></figure></p>
+<p>因此，我们可以直接通过这个属性来获取到解析后的 webpack 配置：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomPlugin</span> </span>&#123;</div><div class="line">    <span class="keyword">constructor</span>() &#123;&#125;</div><div class="line">    apply(compiler) &#123;</div><div class="line">        compiler.plugin(<span class="string">"run"</span>, (compiler) =&gt; &#123;</div><div class="line">            <span class="built_in">console</span>.log(compiler.options)</div><div class="line">        &#125;)</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>如果你不满足于官网给出的配置文档，想要了解更多配置解析，可以看看 <a href="https://github.com/webpack/webpack/blob/master/lib/WebpackOptionsDefaulter.js" target="_blank" rel="external">WebpackOptionsDefaulter.js 这个文件</a>，这里不再赘述。</p>
+<h3 id="输入输出"><a href="#输入输出" class="headerlink" title="输入输出"></a>输入输出</h3><p><code>Compiler</code> 实例在一开始也会初始化输入输出，分别是 <code>inputFileSystem</code> 和 <code>outputFileSystem</code> 属性，一般情况下这两个属性都是对应的 nodejs 中拓展后的 <code>fs</code> 对象。但是有一点要注意，当 <code>Compiler</code> 实例以 <code>watch</code> 模式运行时， <code>outputFileSystem</code> 会被重写成内存输出对象。也就是说，实际上在 <code>watch</code> 模式下，webpack 构建后的文件并不会生成真正的文件，而是保存在内存中。</p>
+<p>我们可以使用 <code>inputFileSystem</code> 和 <code>outputFileSystem</code> 属性来帮助我们实现一些文件操作，如果你希望自定义插件的一些输入输出行为能够跟 webpack 尽量同步，那么最好使用 <code>Compiler</code> 提供的这两个变量：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomPlugin</span> </span>&#123;</div><div class="line">    <span class="keyword">constructor</span>() &#123;&#125;</div><div class="line">    apply(compiler) &#123;</div><div class="line">        compiler.outputFileSystem.mkdirp(<span class="string">"/path/to/dir"</span>, (error) =&gt; &#123;</div><div class="line">            compiler.outputFileSystem.writeFile(<span class="string">"/path/to/file"</span>, <span class="string">"utf-8"</span>, (error) =&gt; &#123;</div><div class="line">            &#125;)</div><div class="line">        &#125;)</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>webpack 的 <code>inputFileSystem</code> 会相对更复杂一点，它内部实现了一些缓存的机制，使得性能效率更高。如果对这部分有兴趣，可以从这个 <code>NodeEnvironmentPlugin</code> 插件开始看起，它是内部初始化了 <code>inputFileSystem</code> 和 <code>outputFileSystem</code>:</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/node/NodeEnvironmentPlugin.js</span></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">NodeEnvironmentPlugin</span> </span>&#123;</div><div class="line">   apply(compiler) &#123;</div><div class="line">       compiler.inputFileSystem = <span class="keyword">new</span> CachedInputFileSystem(<span class="keyword">new</span> NodeJsInputFileSystem(), <span class="number">60000</span>);</div><div class="line">       <span class="keyword">const</span> inputFileSystem = compiler.inputFileSystem;</div><div class="line">       compiler.outputFileSystem = <span class="keyword">new</span> NodeOutputFileSystem();</div><div class="line">       compiler.watchFileSystem = <span class="keyword">new</span> NodeWatchFileSystem(compiler.inputFileSystem);</div><div class="line">       compiler.plugin(<span class="string">"before-run"</span>, (compiler, callback) =&gt; &#123;</div><div class="line">           <span class="keyword">if</span>(compiler.inputFileSystem === inputFileSystem)</div><div class="line">               inputFileSystem.purge();</div><div class="line">           callback();</div><div class="line">       &#125;);</div><div class="line">   &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="创建子编译器"><a href="#创建子编译器" class="headerlink" title="创建子编译器"></a>创建子编译器</h3><p>在第一篇文章讲解 <code>Compilation</code> 实例化的时候，有略微提及到创建子编译器的内容：</p>
+<blockquote>
+<p>这里为什么会有 <code>compilation</code> 和 <code>this-compilation</code> 两个任务点？其实是跟子编译器有关，<code>Compiler</code> 实例通过 <code>createChildCompiler</code> 方法可以创建子编译器实例 <code>childCompiler</code>，创建时 <code>childCompiler</code> 会复制 <code>compiler</code> 实例的任务点监听器。<strong>任务点 <code>compilation</code> 的监听器会被复制，而任务点 <code>this-compilation</code> 的监听器不会被复制。</strong> 更多关于子编译器的内容，将在其他文章中讨论。</p>
+</blockquote>
+<p>这里我们来仔细看一下子编译器是如何创建的，<code>Compiler</code> 实例通过 <code>createChildCompiler</code> 的方法来创建：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/Compiler.js</span></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Compiler</span> <span class="keyword">extends</span> <span class="title">Tapable</span> </span>&#123;</div><div class="line">    <span class="comment">// 其他代码..</span></div><div class="line">    createChildCompiler(compilation, compilerName, compilerIndex, outputOptions, plugins) &#123;</div><div class="line">        <span class="keyword">const</span> childCompiler = <span class="keyword">new</span> Compiler();</div><div class="line">        <span class="keyword">if</span>(<span class="built_in">Array</span>.isArray(plugins)) &#123;</div><div class="line">            plugins.forEach(<span class="function"><span class="params">plugin</span> =&gt;</span> childCompiler.apply(plugin));</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">for</span>(<span class="keyword">const</span> name <span class="keyword">in</span> <span class="keyword">this</span>._plugins) &#123;</div><div class="line">            <span class="keyword">if</span>([<span class="string">"make"</span>, <span class="string">"compile"</span>, <span class="string">"emit"</span>, <span class="string">"after-emit"</span>, <span class="string">"invalid"</span>, <span class="string">"done"</span>, <span class="string">"this-compilation"</span>].indexOf(name) &lt; <span class="number">0</span>)</div><div class="line">            childCompiler._plugins[name] = <span class="keyword">this</span>._plugins[name].slice();</div><div class="line">        &#125;</div><div class="line">        childCompiler.name = compilerName;</div><div class="line">        childCompiler.outputPath = <span class="keyword">this</span>.outputPath;</div><div class="line">        childCompiler.inputFileSystem = <span class="keyword">this</span>.inputFileSystem;</div><div class="line">        childCompiler.outputFileSystem = <span class="literal">null</span>;</div><div class="line">        childCompiler.resolvers = <span class="keyword">this</span>.resolvers;</div><div class="line">        childCompiler.fileTimestamps = <span class="keyword">this</span>.fileTimestamps;</div><div class="line">        childCompiler.contextTimestamps = <span class="keyword">this</span>.contextTimestamps;</div><div class="line"></div><div class="line">        <span class="keyword">const</span> relativeCompilerName = makePathsRelative(<span class="keyword">this</span>.context, compilerName);</div><div class="line">        <span class="keyword">if</span>(!<span class="keyword">this</span>.records[relativeCompilerName]) <span class="keyword">this</span>.records[relativeCompilerName] = [];</div><div class="line">        <span class="keyword">if</span>(<span class="keyword">this</span>.records[relativeCompilerName][compilerIndex])</div><div class="line">        childCompiler.records = <span class="keyword">this</span>.records[relativeCompilerName][compilerIndex];</div><div class="line">        <span class="keyword">else</span></div><div class="line">        <span class="keyword">this</span>.records[relativeCompilerName].push(childCompiler.records = &#123;&#125;);</div><div class="line"></div><div class="line">        childCompiler.options = <span class="built_in">Object</span>.create(<span class="keyword">this</span>.options);</div><div class="line">        childCompiler.options.output = <span class="built_in">Object</span>.create(childCompiler.options.output);</div><div class="line">        <span class="keyword">for</span>(<span class="keyword">const</span> name <span class="keyword">in</span> outputOptions) &#123;</div><div class="line">            childCompiler.options.output[name] = outputOptions[name];</div><div class="line">        &#125;</div><div class="line">        childCompiler.parentCompilation = compilation;</div><div class="line"></div><div class="line">        compilation.applyPlugins(<span class="string">"child-compiler"</span>, childCompiler, compilerName, compilerIndex);</div><div class="line"></div><div class="line">        <span class="keyword">return</span> childCompiler;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>上面的代码看起来很多，但其实主要逻辑基本都是在拷贝父编译器的属性到子编译器上面。值得注意的一点是第10 - 13行，子编译器在拷贝父编译器的任务点时，会过滤掉<code>make</code>, <code>compile</code>, <code>emit</code>, <code>after-emit</code>, <code>invalid</code>, <code>done</code>, <code>this-compilation</code>这些任务点。</p>
+<p>如果你阅读过<a href="https://lxzjj.github.io/2017/11/02/%E7%8E%A9%E8%BD%ACwebpack%EF%BC%88%E4%B8%80%EF%BC%89/">第一篇文章（如果没有，推荐先看一下）</a>，应该会知道上面任务点在整个构建流程中的位置。从这里我们也可以看出来，<strong>子编译器跟父编译器的一个差别在于，子编译器并没有完整的构建流程。</strong> 比如子编译器没有文件生成阶段(<code>emit</code>任务点)，它的文件生成必须挂靠在父编译器下面来实现。</p>
+<p>另外需要注意的是，子编译器的运行入口并非 <code>run</code> 方法 ，而是有单独的 <code>runAsChild</code> 方法来运行，从代码上面也能够直接看出来，它马上调用了 <code>compile</code> 方法，跳过了 <code>run</code>, <code>make</code>等任务点：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/Compiler.js</span></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Compiler</span> <span class="keyword">extends</span> <span class="title">Tapable</span> </span>&#123;</div><div class="line">    <span class="comment">// 其他代码..</span></div><div class="line">    runAsChild(callback) &#123;</div><div class="line">        <span class="keyword">this</span>.compile(<span class="function">(<span class="params">err, compilation</span>) =&gt;</span> &#123;</div><div class="line">            <span class="keyword">if</span>(err) <span class="keyword">return</span> callback(err);</div><div class="line"></div><div class="line">            <span class="keyword">this</span>.parentCompilation.children.push(compilation);</div><div class="line">            <span class="built_in">Object</span>.keys(compilation.assets).forEach(<span class="function"><span class="params">name</span> =&gt;</span> &#123;</div><div class="line">                <span class="keyword">this</span>.parentCompilation.assets[name] = compilation.assets[name];</div><div class="line">            &#125;);</div><div class="line"></div><div class="line">            <span class="keyword">const</span> entries = <span class="built_in">Object</span>.keys(compilation.entrypoints).map(<span class="function"><span class="params">name</span> =&gt;</span> &#123;</div><div class="line">                <span class="keyword">return</span> compilation.entrypoints[name].chunks;</div><div class="line">            &#125;).reduce(<span class="function">(<span class="params">array, chunks</span>) =&gt;</span> &#123;</div><div class="line">                <span class="keyword">return</span> array.concat(chunks);</div><div class="line">            &#125;, []);</div><div class="line"></div><div class="line">            <span class="keyword">return</span> callback(<span class="literal">null</span>, entries, compilation);</div><div class="line">        &#125;);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>那么子编译器有什么作用呢？从上面功能和流程来看，<strong>子编译器仍然拥有完整的模块解析和chunk生成阶段。</strong> 也就是说我们可以利用子编译器来独立（于父编译器）跑完一个核心构建流程，额外生成一些需要的模块或者chunk。</p>
+<p>事实上一些外部的 webpack 插件就是这么做的，比如常用的插件 <code>html-webpack-plugin</code> 中，就是利用子编译器来独立完成 html 文件的构建，为什么不能直接读取 html 文件？因为 html 文件中可能依赖其他外部资源（比如 img 的src属性），所以加载 html 文件时仍然需要一个额外的完整的构建流程来完成这个任务，子编译器的作用在这里就体现出来了：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/jantimon/html-webpack-plugin/blob/master/lib/compiler.js</span></div><div class="line"></div><div class="line"><span class="keyword">var</span> compilerName = getCompilerName(context, outputFilename);</div><div class="line"><span class="keyword">var</span> childCompiler = compilation.createChildCompiler(compilerName, outputOptions);</div><div class="line">childCompiler.context = context;</div><div class="line">childCompiler.apply(</div><div class="line">    <span class="keyword">new</span> NodeTemplatePlugin(outputOptions),</div><div class="line">    <span class="keyword">new</span> NodeTargetPlugin(),</div><div class="line">    <span class="keyword">new</span> LibraryTemplatePlugin(<span class="string">'HTML_WEBPACK_PLUGIN_RESULT'</span>, <span class="string">'var'</span>),</div><div class="line">    <span class="keyword">new</span> SingleEntryPlugin(<span class="keyword">this</span>.context, template), <span class="comment">// html文件作为 entry</span></div><div class="line">    <span class="keyword">new</span> LoaderTargetPlugin(<span class="string">'node'</span>)</div><div class="line">);</div><div class="line"></div><div class="line"><span class="comment">// 其他代码..</span></div><div class="line"></div><div class="line">childCompiler.runAsChild(<span class="function"><span class="keyword">function</span> (<span class="params">err, entries, childCompilation</span>) </span>&#123;</div><div class="line">    <span class="comment">// 其他代码..</span></div><div class="line"></div><div class="line">    <span class="comment">// childCompilation.assets 属性可以拿到构建后的文件代码</span></div><div class="line">&#125;)</div></pre></td></tr></table></figure></p>
+<p>在下一篇文章中我们将亲自实现一个插件，关于子编译器的具体实践到时再继续讨论。</p>
+<h2 id="Compilation"><a href="#Compilation" class="headerlink" title="Compilation"></a>Compilation</h2><p>接下来我们来看看最重要的 <code>Compilation</code> 对象，在上一篇文章中，我们已经说明过部分属性了，比如我们简单回顾一下</p>
+<ul>
+<li><code>modules</code> 记录了所有解析后的模块</li>
+<li><code>chunks</code> 记录了所有chunk</li>
+<li><code>assets</code>记录了所有要生成的文件</li>
+</ul>
+<p>上面这三个属性已经包含了 <code>Compilation</code> 对象中大部分的信息，但是我们也只是有个大致的概念，特别是 <code>modules</code> 中每个模块实例到底是什么东西，我们并不太清楚。所以下面的内容将会比较细地讲解。</p>
+<p>但如果你对这部分内容不感兴趣也可以直接跳过，因为能真正使用的场景不会太多，但它能加深对 webpack 构建的理解。</p>
+<h3 id="所谓的模块"><a href="#所谓的模块" class="headerlink" title="所谓的模块"></a>所谓的模块</h3><p><code>Compilation</code> 在解析过程中，会将解析后的模块记录在 <code>modules</code> 属性中，那么每一个模块实例又是什么呢？</p>
+<p>首先我们先回顾一下最开始的类图，我们会发现跟模块相关的类非常多，看起来类之间的关系也十分复杂，但其实只要记住下面的公式就很好理解：</p>
+<p><img src="/2017/11/08/玩转webpack（二）/依赖和模块的关系.svg" alt="依赖和模块的关系"></p>
+<p>这个公式的解读是： 一个依赖对象（Dependency）经过对应的工厂对象（Factory）创建之后，就能够生成对应的模块实例（Module）。</p>
+<p><strong>首先什么是 Dependency？</strong><br>我个人的理解是，还未被解析成模块实例的依赖对象。比如我们运行 webpack 时传入的入口模块，或者一个模块依赖的其他模块，都会先生成一个 <code>Dependency</code> 对象。作为基类的 <code>Dependency</code> 十分简单，内部只有一个 <code>module</code> 属性来记录最终生成的模块实例。但是它的派生类非常多，webpack 中有单独的文件夹（<code>webpack/lib/dependencies</code>）来存放所有的派生类，这里的每一个派生类都对应着一种依赖的场景。比如从 CommonJS 中require一个模块，那么会先生成 <code>CommonJSRequireDependency</code>。</p>
+<p><strong>有了 Dependency 之后，如何找到对应的工厂对象呢？</strong><br><code>Dependecy</code> 的每一个派生类在使用前，都会先确定对应的工厂对象，比如 <code>SingleEntryDependency</code> 对应的工厂对象是 <code>NormalModuleFactory</code>。这些信息全部是记录在 <code>Compilation</code> 对象的 <code>dependencyFactories</code> 属性中，这个属性是 ES6 中的 <code>Map</code> 对象。直接看下面的代码可能更容易理解：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/SingleEntryPlugin.js</span></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">SingleEntryPlugin</span> </span>&#123;</div><div class="line">    apply(compiler) &#123;</div><div class="line">        compiler.plugin(<span class="string">"compilation"</span>, (compilation, params) =&gt; &#123;</div><div class="line">            <span class="keyword">const</span> normalModuleFactory = params.normalModuleFactory;</div><div class="line"></div><div class="line">            <span class="comment">// 这里记录了 SingleEntryDependency 对应的工厂对象是 NormalModuleFactory</span></div><div class="line">            compilation.dependencyFactories.set(SingleEntryDependency, normalModuleFactory);</div><div class="line">        &#125;);</div><div class="line"></div><div class="line">        compiler.plugin(<span class="string">"make"</span>, (compilation, callback) =&gt; &#123;</div><div class="line">            <span class="comment">// 入口的模块会先变成一个 Dependency 对象</span></div><div class="line">            <span class="keyword">const</span> dep = SingleEntryPlugin.createDependency(<span class="keyword">this</span>.entry, <span class="keyword">this</span>.name);</div><div class="line">            compilation.addEntry(<span class="keyword">this</span>.context, dep, <span class="keyword">this</span>.name, callback);</div><div class="line">        &#125;);</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/Compilation.js</span></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Compilation</span> <span class="keyword">extends</span> <span class="title">Tapable</span> </span>&#123;</div><div class="line">    _addModuleChain(context, dependency, onModule, callback) &#123;</div><div class="line">        <span class="comment">// 其他代码..</span></div><div class="line"></div><div class="line">        <span class="comment">// 开始构建时，通过 Compilation 的 dependenciesFactories 属性找到对应的工厂对象</span></div><div class="line">        <span class="keyword">const</span> moduleFactory = <span class="keyword">this</span>.dependencyFactories.get(dependency.constructor);</div><div class="line">        <span class="keyword">if</span>(!moduleFactory) &#123;</div><div class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">Error</span>(<span class="string">`No dependency factory available for this dependency type: <span class="subst">$&#123;dependency.constructor.name&#125;</span>`</span>);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        <span class="keyword">this</span>.semaphore.acquire(<span class="function"><span class="params">()</span> =&gt;</span> &#123;</div><div class="line">            <span class="comment">// 调用工厂对象的 create 方法，dependency作为参数传入，最终生成模块实例</span></div><div class="line">            moduleFactory.create(&#123;</div><div class="line">                contextInfo: &#123;</div><div class="line">                    issuer: <span class="string">""</span>,</div><div class="line">                    compiler: <span class="keyword">this</span>.compiler.name</div><div class="line">                &#125;,</div><div class="line">                context: context,</div><div class="line">                dependencies: [dependency] <span class="comment">// 作为参数传入</span></div><div class="line">            &#125;, (err, <span class="built_in">module</span>) =&gt; &#123;</div><div class="line">                <span class="comment">// module就是生成的模块实例</span></div><div class="line"></div><div class="line">                <span class="comment">// 其他代码..</span></div><div class="line">            &#125;)</div><div class="line">        &#125;)</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>一种工厂对象只会生成一种模块，所以不同的模块实例都会有不同的工厂对象来生成。模块的生成过程我们在第一篇文章有讨论过，无非就是解析模块的 <code>request</code>，<code>loaders</code>等信息然后实例化。</p>
+<p><strong>模块对象有哪些特性呢？</strong><br>同样在第一篇文章中，我们知道一个模块在实例化之后并不意味着构建就结束了，它还有一个内部构建的过程。所有的模块实例都有一个 <code>build</code> 方法，这个方法的作用是开始加载模块源码（并应用loaders），并且通过 js 解析器来完成依赖解析。这里要两个点要注意：</p>
+<ol>
+<li>模块源码最终是保存在 <code>_source</code> 属性中，可以通过 <code>_source.source()</code> 来得到。注意在 <code>build</code> 之前 <code>_source</code> 是不存在的。</li>
+<li>js 解析器解析之后会记录所有的模块依赖，这些依赖其实会分为三种，分别记录在 <code>variables</code>，<code>dependencies</code>， <code>blocks</code>属性。模块构建之后的递归构建过程，其实就是读取这三个属性来重复上面的过程：依赖 =&gt; 工厂 =&gt; 模块</li>
+</ol>
+<p>我们再来看看这些模块类，从前面的类图看，它们是继承于 <code>Module</code> 类。这个类实际上才是我们平常用来跟 <code>chunk</code> 打交道的类对象，它内部有 <code>_chunks</code> 属性来记录后续所在的 chunk 信息，并且提供了很多相关的方法来操作这个对象：<code>addChunk</code>，<code>removeChunk</code>，<code>isInChunk</code>，<code>mapChunks</code>等。后面我们也会看到，<code>Chunk</code> 类与之对应。</p>
+<p><code>Module</code> 类往上还会继承于 <code>DependenciesBlock</code>，这个是所有模块的基类，它包含了处理依赖所需要的属性和方法。上面所说的 <code>variables</code>，<code>dependencies</code>，<code>blocks</code> 也是这个基类拥有的三个属性。它们分别是：</p>
+<ul>
+<li><code>variables</code> 对应需要对应的外部变量，比如 <code>__filename</code>，<code>__dirname</code>，<code>process</code> 等node环境下特有的变量</li>
+<li><code>dependencies</code> 对应需要解析的其他普通模块，比如 <code>require(&quot;./a&quot;)</code> 中的 <code>a</code> 模块会先生成一个 <code>CommonJSRequireDependency</code></li>
+<li><code>blocks</code> 对应需要解析的代码块（最终会对应成一个 <code>chunk</code>），比如 <code>require.ensure(&quot;./b&quot;)</code>，这里的 <code>b</code> 会生成一个 <code>DependenciesBlock</code> 对象</li>
+</ul>
+<p>经过上面的讨论之后，我们基本将 webpack 中于模块相关的对象、概念都涉及到了，剩下还有模块渲染相关的模板，会在下面描述 <code>Template</code> 时继续讨论。</p>
+<h3 id="Chunk"><a href="#Chunk" class="headerlink" title="Chunk"></a>Chunk</h3><p>讨论完 webpack 的模块之后，下面需要说明的是 <code>Chunk</code> 对象。关于 <code>chunk</code> 的生成，在第一篇文章中有涉及，这里不再赘述。<br><code>chunk</code> 只有一个相关类，而且并不复杂。<code>Chunk</code> 类内部的主要属性是 <code>_modules</code>，用来记录包含的所有模块对象，并且提供了很多方法来操作：<code>addModule</code>，<code>removeModule</code>，<code>mapModules</code> 等。<br>另外有几个方法可能比较实用，这里也列出来：</p>
+<ul>
+<li><code>integrate</code> 用来合并其他chunk</li>
+<li><code>split</code> 用来生成新的子 chunk</li>
+<li><code>hasRuntime</code> 判断是否是入口 chunk<br>其他关于 chunk 的内容，有兴趣的同学可以直接<a href="https://github.com/webpack/webpack/blob/master/lib/Chunk.js" target="_blank" rel="external">查看源码</a>。</li>
+</ul>
+<h3 id="Template"><a href="#Template" class="headerlink" title="Template"></a>Template</h3><p><code>Compilation</code> 实例在生成最终文件时，需要将所有的 chunk 渲染（生成代码）出来，这个时候需要用到下面几个属性：</p>
+<ul>
+<li><code>mainTemplate</code> 对应 <code>MainTemplate</code> 类，用来渲染入口 chunk</li>
+<li><code>chunkTemplate</code> 对应 <code>ChunkTemplate</code> 类，用来传染非入口 chunk</li>
+<li><code>moduleTemplate</code> 对应 <code>ModuleTemplate</code>，用来渲染 chunk 中的模块</li>
+<li><code>dependencyTemplates</code> 记录每一个依赖类对应的模板</li>
+</ul>
+<p>在第一篇文章时，有略微描述过 chunk 渲染的过程，这里再仔细地过一遍，看看这几个属性是如何应用在渲染过程中的：</p>
+<p>首先 chunk 的渲染入口是 <code>mainTemplate</code> 和 <code>chunkTemplate</code> 的 <code>render</code> 方法。根据 chunk 是否是入口 chunk 来区分使用哪一个：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/Compilation.js</span></div><div class="line"></div><div class="line"><span class="keyword">if</span>(chunk.hasRuntime()) &#123; <span class="comment">// 入口chunk</span></div><div class="line">    source = <span class="keyword">this</span>.mainTemplate.render(<span class="keyword">this</span>.hash, chunk, <span class="keyword">this</span>.moduleTemplate, <span class="keyword">this</span>.dependencyTemplates);</div><div class="line">&#125; <span class="keyword">else</span> &#123;</div><div class="line">    source = <span class="keyword">this</span>.chunkTemplate.render(chunk, <span class="keyword">this</span>.moduleTemplate, <span class="keyword">this</span>.dependencyTemplates);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>两个类的 <code>render</code> 方法将生成不同的”包装代码”，<code>MainTemplate</code> 对应的入口 chunk 需要带有 webpack 的启动代码，所以会有一些函数的声明和启动。<br>这两个类都只负责这些”包装代码”的生成，包装代码中间的每个模块代码，是通过调用 <code>renderChunkModules</code> 方法来生成的。这里的 <code>renderChunkModules</code> 是由他们的基类 <code>Template</code> 类提供，方法会遍历 chunk 中的模块，然后使用 <code>ModuleTemplate</code> 来渲染。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/MainTemplate.js</span></div><div class="line"><span class="comment">// MainTemplate的部分render方法：</span></div><div class="line"><span class="keyword">const</span> source = <span class="keyword">new</span> ConcatSource();</div><div class="line">source.add(<span class="string">"/******/ (function(modules) &#123; // webpackBootstrap\n"</span>);</div><div class="line">source.add(<span class="keyword">new</span> PrefixSource(<span class="string">"/******/"</span>, bootstrapSource));</div><div class="line">source.add(<span class="string">"/******/ &#125;)\n"</span>);</div><div class="line">source.add(<span class="string">"/************************************************************************/\n"</span>);</div><div class="line">source.add(<span class="string">"/******/ ("</span>);</div><div class="line"><span class="comment">// 调用 renderChunkModules 方法，遍历这个 chunk 的所有模块生成对应的代码</span></div><div class="line"><span class="keyword">const</span> modules = <span class="keyword">this</span>.renderChunkModules(chunk, moduleTemplate, dependencyTemplates, <span class="string">"/******/ "</span>);</div><div class="line">source.add(<span class="keyword">this</span>.applyPluginsWaterfall(<span class="string">"modules"</span>, modules, chunk, hash, moduleTemplate, dependencyTemplates));</div><div class="line">source.add(<span class="string">")"</span>);</div><div class="line"></div><div class="line"><span class="comment">// https://github.com/webpack/webpack/blob/master/lib/Template.js</span></div><div class="line"><span class="built_in">module</span>.exports = <span class="class"><span class="keyword">class</span> <span class="title">Template</span> <span class="keyword">extends</span> <span class="title">Tapable</span> </span>&#123;</div><div class="line">    <span class="comment">// 其他代码..</span></div><div class="line">    renderChunkModules(chunk, moduleTemplate, dependencyTemplates, prefix) &#123;</div><div class="line">        <span class="comment">// 其他代码..</span></div><div class="line">        <span class="keyword">var</span> allModules = chunk.mapModules(<span class="function"><span class="keyword">function</span>(<span class="params">module</span>) </span>&#123;</div><div class="line">            <span class="keyword">return</span> &#123;</div><div class="line">                id: <span class="built_in">module</span>.id,</div><div class="line">                <span class="comment">// 调用 moduleTemplate.render 方法</span></div><div class="line">                source: moduleTemplate.render(<span class="built_in">module</span>, dependencyTemplates, chunk)</div><div class="line">            &#125;;</div><div class="line">        &#125;);</div><div class="line">        <span class="comment">// 其他代码..</span></div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p><code>ModuleTemplate</code> 做的事情跟 <code>MainTemplate</code> 类似，它同样只是生成”包装代码”来封装真正的模块代码，而真正的模块代码，是通过模块实例的 <code>source</code> 方法来提供。该方法会先读取 <code>_source</code> 属性，即模块内部构建时应用loaders之后生成的代码，然后使用 <code>dependencyTemplates</code> 来更新模块源码。</p>
+<p><code>dependencyTemplates</code> 是 <code>Compilation</code> 对象的一个属性，它跟 <code>dependencyFactories</code> 同样是个 <code>Map</code> 对象，记录了所有的依赖类对应的模板类。</p>
+<p>上面用文字来描述这个过程可能十分难懂，所以我们直接看实际的例子。比如下面这个文件：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">let</span> a = <span class="built_in">require</span>(<span class="string">"./a"</span>)</div></pre></td></tr></table></figure>
+<p>我们来看看使用 webpack 构建后最终的文件：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/******/</span> (<span class="function"><span class="keyword">function</span>(<span class="params">modules</span>) </span>&#123; <span class="comment">// webpackBootstrap</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// The module cache</span></div><div class="line"><span class="comment">/******/</span> 	<span class="keyword">var</span> installedModules = &#123;&#125;;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// The require function</span></div><div class="line"><span class="comment">/******/</span> 	<span class="function"><span class="keyword">function</span> <span class="title">__webpack_require__</span>(<span class="params">moduleId</span>) </span>&#123;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 		<span class="comment">// Check if module is in cache</span></div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">if</span>(installedModules[moduleId]) &#123;</div><div class="line"><span class="comment">/******/</span> 			<span class="keyword">return</span> installedModules[moduleId].exports;</div><div class="line"><span class="comment">/******/</span> 		&#125;</div><div class="line"><span class="comment">/******/</span> 		<span class="comment">// Create a new module (and put it into the cache)</span></div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">var</span> <span class="built_in">module</span> = installedModules[moduleId] = &#123;</div><div class="line"><span class="comment">/******/</span> 			i: moduleId,</div><div class="line"><span class="comment">/******/</span> 			l: <span class="literal">false</span>,</div><div class="line"><span class="comment">/******/</span> 			exports: &#123;&#125;</div><div class="line"><span class="comment">/******/</span> 		&#125;;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 		<span class="comment">// Execute the module function</span></div><div class="line"><span class="comment">/******/</span> 		modules[moduleId].call(<span class="built_in">module</span>.exports, <span class="built_in">module</span>, <span class="built_in">module</span>.exports, __webpack_require__);</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 		<span class="comment">// Flag the module as loaded</span></div><div class="line"><span class="comment">/******/</span> 		<span class="built_in">module</span>.l = <span class="literal">true</span>;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 		<span class="comment">// Return the exports of the module</span></div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">return</span> <span class="built_in">module</span>.exports;</div><div class="line"><span class="comment">/******/</span> 	&#125;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// expose the modules object (__webpack_modules__)</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.m = modules;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// expose the module cache</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.c = installedModules;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// define getter function for harmony exports</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.d = <span class="function"><span class="keyword">function</span>(<span class="params">exports, name, getter</span>) </span>&#123;</div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">if</span>(!__webpack_require__.o(exports, name)) &#123;</div><div class="line"><span class="comment">/******/</span> 			<span class="built_in">Object</span>.defineProperty(exports, name, &#123;</div><div class="line"><span class="comment">/******/</span> 				configurable: <span class="literal">false</span>,</div><div class="line"><span class="comment">/******/</span> 				enumerable: <span class="literal">true</span>,</div><div class="line"><span class="comment">/******/</span> 				get: getter</div><div class="line"><span class="comment">/******/</span> 			&#125;);</div><div class="line"><span class="comment">/******/</span> 		&#125;</div><div class="line"><span class="comment">/******/</span> 	&#125;;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// getDefaultExport function for compatibility with non-harmony modules</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.n = <span class="function"><span class="keyword">function</span>(<span class="params">module</span>) </span>&#123;</div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">var</span> getter = <span class="built_in">module</span> &amp;&amp; <span class="built_in">module</span>.__esModule ?</div><div class="line"><span class="comment">/******/</span> 			<span class="function"><span class="keyword">function</span> <span class="title">getDefault</span>(<span class="params"></span>) </span>&#123; <span class="keyword">return</span> <span class="built_in">module</span>[<span class="string">'default'</span>]; &#125; :</div><div class="line"><span class="comment">/******/</span> 			<span class="function"><span class="keyword">function</span> <span class="title">getModuleExports</span>(<span class="params"></span>) </span>&#123; <span class="keyword">return</span> <span class="built_in">module</span>; &#125;;</div><div class="line"><span class="comment">/******/</span> 		__webpack_require__.d(getter, <span class="string">'a'</span>, getter);</div><div class="line"><span class="comment">/******/</span> 		<span class="keyword">return</span> getter;</div><div class="line"><span class="comment">/******/</span> 	&#125;;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// Object.prototype.hasOwnProperty.call</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.o = <span class="function"><span class="keyword">function</span>(<span class="params">object, property</span>) </span>&#123; <span class="keyword">return</span> <span class="built_in">Object</span>.prototype.hasOwnProperty.call(object, property); &#125;;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// __webpack_public_path__</span></div><div class="line"><span class="comment">/******/</span> 	__webpack_require__.p = <span class="string">""</span>;</div><div class="line"><span class="comment">/******/</span></div><div class="line"><span class="comment">/******/</span> 	<span class="comment">// Load entry module and return exports</span></div><div class="line"><span class="comment">/******/</span> 	<span class="keyword">return</span> __webpack_require__(__webpack_require__.s = <span class="number">0</span>);</div><div class="line"><span class="comment">/******/</span> &#125;)</div><div class="line"><span class="comment">/************************************************************************/</span></div><div class="line"><span class="comment">/******/</span> ([</div><div class="line"><span class="comment">/* 0 */</span></div><div class="line"><span class="comment">/***/</span> (<span class="function"><span class="keyword">function</span>(<span class="params">module, exports, __webpack_require__</span>) </span>&#123;</div><div class="line"></div><div class="line"><span class="meta">"use strict"</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">var</span> a = __webpack_require__(<span class="number">1</span>);</div><div class="line"></div><div class="line"><span class="comment">/***/</span> &#125;),</div><div class="line"><span class="comment">/* 1 */</span></div><div class="line"><span class="comment">/***/</span> (<span class="function"><span class="keyword">function</span>(<span class="params">module, exports, __webpack_require__</span>) </span>&#123;</div><div class="line"></div><div class="line"><span class="meta">"use strict"</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="built_in">console</span>.log(<span class="string">"a"</span>);</div><div class="line"></div><div class="line"><span class="comment">/***/</span> &#125;)</div><div class="line"><span class="comment">/******/</span> ]);</div></pre></td></tr></table></figure></p>
+<p>其中，从 1-66 行都是 <code>MainTemplate</code> 生成的启动代码，剩余的代码生成如下图所示：<br><img src="/2017/11/08/玩转webpack（二）/demo.jpg" alt="代码生成示例"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>通过这篇文章，我们将 webpack 中的一些核心概念和对象都进行了不同程度的讨论，对于 webpack 中有哪些对象可以操作有了一定的认识。下一篇文章将手动写一个 webpack 插件，来验证这两篇文章的讨论。<br>最后再次说明，本文内容是由个人理解和整理，如果有不正确的地方欢迎大家指正。如果需要转载，请注明出处。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/webpack/" rel="tag"># webpack</a>
+          
+            <a href="/tags/javascript/" rel="tag"># javascript</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/11/02/玩转webpack（一）/" rel="next" title="玩转webpack（一）：webpack的基本架构和构建流程">
+                <i class="fa fa-chevron-left"></i> 玩转webpack（一）：webpack的基本架构和构建流程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+          
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.jpg"
+               alt="理性在纠结" />
+          <p class="site-author-name" itemprop="name">理性在纠结</p>
+           
+              <p class="site-description motion-element" itemprop="description">互联网搬砖小码农，欢迎一起讨论前端技术</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+        
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/lxzjj" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/lxzjj/activities" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://mp.weixin.qq.com/s/Lo7kvSRqbxCrJ-Eg2KfZXA" target="_blank" title="微信公众号">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微信公众号
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#webpack中的核心对象"><span class="nav-number">2.</span> <span class="nav-text">webpack中的核心对象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tapable"><span class="nav-number">3.</span> <span class="nav-text">Tapable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Compiler"><span class="nav-number">4.</span> <span class="nav-text">Compiler</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#options属性"><span class="nav-number">4.1.</span> <span class="nav-text">options属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#输入输出"><span class="nav-number">4.2.</span> <span class="nav-text">输入输出</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#创建子编译器"><span class="nav-number">4.3.</span> <span class="nav-text">创建子编译器</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Compilation"><span class="nav-number">5.</span> <span class="nav-text">Compilation</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#所谓的模块"><span class="nav-number">5.1.</span> <span class="nav-text">所谓的模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Chunk"><span class="nav-number">5.2.</span> <span class="nav-text">Chunk</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Template"><span class="nav-number">5.3.</span> <span class="nav-text">Template</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">理性在纠结</span>
+  <span id="busuanzi_container_site_pv" > &nbsp;&nbsp;|&nbsp;&nbsp; 网站访问量：<span id="busuanzi_value_site_pv" ></span></span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>
